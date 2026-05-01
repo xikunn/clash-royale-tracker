@@ -27,6 +27,33 @@ const EMULATOR_TITLES = [
 ]
 
 // PowerShell 脚本：找到窗口并返回坐标
+// 用进程名模糊匹配 MuMu 主窗口，避免中文标题编码问题
+const PS_FIND_MUMU = `
+Add-Type @"
+using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+public class Win32 {
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+}
+public struct RECT { public int Left,Top,Right,Bottom; }
+"@
+$procs = Get-Process | Where-Object { $_.Name -like '*MuMu*' -and $_.MainWindowHandle -ne 0 }
+foreach ($p in $procs) {
+  $r = New-Object RECT
+  if ([Win32]::GetWindowRect($p.MainWindowHandle, [ref]$r)) {
+    $w = $r.Right - $r.Left
+    $h = $r.Bottom - $r.Top
+    if ($w -gt 100 -and $h -gt 200) {
+      Write-Output "$($r.Left) $($r.Top) $($r.Right) $($r.Bottom)"
+      exit 0
+    }
+  }
+}
+exit 1
+`
+
 const PS_SCRIPT = (title: string) => `
 Add-Type @"
 using System;
@@ -34,7 +61,6 @@ using System.Runtime.InteropServices;
 public class Win32 {
   [DllImport("user32.dll")] public static extern IntPtr FindWindow(string c, string t);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
-  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
 }
 public struct RECT { public int Left,Top,Right,Bottom; }
 "@
@@ -70,6 +96,15 @@ export class WindowFinder {
       return this.cached
     }
 
+    // 优先用进程名模糊匹配（解决中文窗口标题编码问题）
+    const mumuInfo = this.findByPs(PS_FIND_MUMU, 'MuMu(process)')
+    if (mumuInfo) {
+      this.cached = mumuInfo
+      this.lastCheck = now
+      return mumuInfo
+    }
+
+    // 降级：按精确窗口标题匹配
     for (const title of EMULATOR_TITLES) {
       const info = this.findByTitle(title)
       if (info) {
@@ -80,7 +115,6 @@ export class WindowFinder {
       }
     }
 
-    // 找不到任何模拟器
     if (this.cached) {
       console.warn('[WindowFinder] Emulator window lost, using last known position')
       return this.cached
@@ -90,37 +124,50 @@ export class WindowFinder {
     return null
   }
 
+  private findByPs(psScript: string, label: string): WindowInfo | null {
+    return this.parseOutput(
+      this.runPs(psScript.replace(/\n/g, ' ')),
+      label
+    )
+  }
+
   private findByTitle(title: string): WindowInfo | null {
+    return this.parseOutput(
+      this.runPs(PS_SCRIPT(title).replace(/\n/g, ' ').replace(/"/g, '\\"')),
+      title
+    )
+  }
+
+  private runPs(cmd: string): string | null {
     try {
-      const output = execSync(
-        `powershell -NoProfile -Command "${PS_SCRIPT(title).replace(/\n/g, ' ').replace(/"/g, '\\"')}"`,
-        { timeout: 1000, windowsHide: true }
+      return execSync(
+        `powershell -NoProfile -Command "${cmd}"`,
+        { timeout: 1500, windowsHide: true }
       ).toString().trim()
-
-      const parts = output.split(' ').map(Number)
-      if (parts.length !== 4 || parts.some(isNaN)) return null
-
-      const [left, top, right, bottom] = parts
-      const w = right - left
-      const h = bottom - top
-
-      if (w <= 0 || h <= 0) return null
-
-      const gameRect: Rect = {
-        x: left + BORDER.left,
-        y: top  + BORDER.top,
-        w: w - BORDER.left - BORDER.right,
-        h: h - BORDER.top  - BORDER.bottom,
-      }
-
-      return {
-        title,
-        rect: { x: left, y: top, w, h },
-        gameRect
-      }
     } catch {
       return null
     }
+  }
+
+  private parseOutput(output: string | null, label: string): WindowInfo | null {
+    if (!output) return null
+    const parts = output.split(' ').map(Number)
+    if (parts.length !== 4 || parts.some(isNaN)) return null
+
+    const [left, top, right, bottom] = parts
+    const w = right - left
+    const h = bottom - top
+    if (w <= 0 || h <= 0) return null
+
+    const gameRect: Rect = {
+      x: left + BORDER.left,
+      y: top  + BORDER.top,
+      w: w - BORDER.left - BORDER.right,
+      h: h - BORDER.top  - BORDER.bottom,
+    }
+
+    console.log(`[WindowFinder] Found "${label}" at`, gameRect)
+    return { title: label, rect: { x: left, y: top, w, h }, gameRect }
   }
 
   /** 强制清除缓存，下次 find() 时重新检测 */
