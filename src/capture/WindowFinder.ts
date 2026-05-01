@@ -19,7 +19,7 @@ const BORDER = { top: 0, left: 0, right: 0, bottom: 0 }
 export class WindowFinder {
   private cached: WindowInfo | null = null
   private lastCheck = 0
-  private readonly CACHE_MS = 2000
+  private readonly CACHE_MS = 5000
 
   find(): WindowInfo | null {
     const now = Date.now()
