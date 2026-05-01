@@ -24,7 +24,11 @@ import { EmulatorWindow } from '../src/capture/ScreenCapture'
 
 // ── 路径 ──────────────────────────────────────────────────────────────────────
 
-const TEMPLATE_DIR = path.join(__dirname, '../assets/templates')
+// dev 模式：process.cwd() = 项目根目录
+// 生产模式：app.getAppPath() = 打包后根目录
+const TEMPLATE_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, 'assets/templates')
+  : path.join(process.cwd(), 'assets/templates')
 const PRELOAD_PATH = path.join(__dirname, 'preload.js')
 const RENDERER_INDEX = process.env['ELECTRON_RENDERER_URL']
   ?? `file://${path.join(__dirname, '../src/overlay/index.html')}`
