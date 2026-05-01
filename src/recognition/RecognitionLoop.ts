@@ -35,7 +35,7 @@ type StateCallback = (state: OverlayState) => void
 
 // 帧间隔：500ms（2 FPS）。
 // 皇室战争放卡动画约持续 600ms，500ms 足以捕到落地帧。
-const FRAME_INTERVAL_MS = 1500
+const FRAME_INTERVAL_MS = 500
 
 // 如果整体变化比例超过这个值，说明场面大变（如进入结算画面），跳过本帧
 const MAX_CHANGE_RATIO = 0.4
