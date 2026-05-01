@@ -17,6 +17,7 @@
  */
 
 import { ScreenCapture } from '../capture/ScreenCapture'
+import type { CaptureResult, Rect } from '../capture/ScreenCapture'
 import { TemplateMatcher } from './TemplateMatcher'
 import { DeckTracker } from '../tracker/DeckTracker'
 import { ElixirTracker, readElixirBar } from '../tracker/ElixirTracker'
@@ -134,10 +135,11 @@ export class RecognitionLoop {
     const candidates = await this.capture.cropMany(frame, diff.regions, TEMPLATE_SIZE)
     const results = this.matcher.matchMany(candidates)
 
-    // 调试：打印每个区域的最佳匹配得分
+    // 调试：打印每个区域的最佳匹配得分，并保存截图
     results.forEach((r, i) => {
       console.log(`  region[${i}] best=${r.cardId} conf=${(r.confidence * 100).toFixed(1)}%`)
     })
+    this.saveDebugRegions(frame, diff.regions)
 
     for (const result of results) {
       if (!result.matched) continue
@@ -159,6 +161,25 @@ export class RecognitionLoop {
     const last = this.recentPlays.get(cardId)
     if (!last) return false
     return Date.now() - last < this.DEDUP_COOLDOWN_MS
+  }
+
+  /**
+   * 保存变化区域截图到 %USERPROFILE%\cr_debug\regions\
+   * 用于人工挑选竞技场单位模板
+   */
+  private saveDebugRegions(frame: CaptureResult, regions: Rect[]): void {
+    if (process.env.DEBUG_SAVE !== 'true') return
+    const fs   = require('fs')
+    const os   = require('os')
+    const path = require('path')
+    const dir  = path.join(os.homedir(), 'cr_debug', 'regions')
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+
+    regions.forEach((r, i) => {
+      const img = frame.jimp.clone().crop(r.x, r.y, r.w, r.h)
+      const filename = path.join(dir, `${Date.now()}_r${i}.png`)
+      img.write(filename)
+    })
   }
 
   private broadcast(timestamp: number): void {
