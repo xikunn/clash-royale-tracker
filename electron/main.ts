@@ -43,6 +43,7 @@ app.whenReady().then(() => {
   createOverlayWindow()
   createTray()
   setupIpc()
+  startLoop()   // 自动启动识别循环
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -150,6 +151,16 @@ function createTray(): void {
     { type: 'separator' },
     { label: '退出',         click: () => app.quit()        }
   ]))
+}
+
+function startLoop(): void {
+  loop = new RecognitionLoop(TEMPLATE_DIR)
+  loop.onStateUpdate((state: OverlayState) => {
+    overlayWindow?.webContents.send('state:update', state)
+    controlWindow?.webContents.send('state:update', state)
+  })
+  loop.start()
+  console.log('[main] Recognition loop auto-started')
 }
 
 function toggleOverlay(): void {
