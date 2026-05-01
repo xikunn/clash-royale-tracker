@@ -134,6 +134,11 @@ export class RecognitionLoop {
     const candidates = await this.capture.cropMany(frame, diff.regions, TEMPLATE_SIZE)
     const results = this.matcher.matchMany(candidates)
 
+    // 调试：打印每个区域的最佳匹配得分
+    results.forEach((r, i) => {
+      console.log(`  region[${i}] best=${r.cardId} conf=${(r.confidence * 100).toFixed(1)}%`)
+    })
+
     for (const result of results) {
       if (!result.matched) continue
       if (this.isDuplicate(result.cardId)) continue
