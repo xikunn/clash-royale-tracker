@@ -2,9 +2,9 @@
   "name": "clash-royale-tracker",
   "version": "0.1.0",
   "description": "Clash Royale deck & elixir tracker overlay — PC simulator MVP",
-  "main": "dist-electron/main.js",
+  "main": "out/main/main.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "electron-vite dev --config electron-vite.config.js",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
