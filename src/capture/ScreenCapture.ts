@@ -75,14 +75,13 @@ export class ScreenCapture {
       const info = this.finder.find()
       if (info) {
         const { x, y, w, h } = info.gameRect
-        // 窗口位置变了才重置帧差基准
-        if (
-          x !== this.window.rect.x ||
-          y !== this.window.rect.y
-        ) {
+        if (x !== this.window.rect.x || y !== this.window.rect.y) {
           this.prevGray = null
         }
         this.window = { screenIndex: 0, rect: info.gameRect }
+        // 根据实际窗口尺寸自动缩放协议坐标
+        const { setScale } = require('../protocol/ClashRoyaleProtocol')
+        setScale(w, h)
       }
     }
 
