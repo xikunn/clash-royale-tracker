@@ -21,6 +21,7 @@ import { TemplateMatcher } from './TemplateMatcher'
 import { DeckTracker } from '../tracker/DeckTracker'
 import { ElixirTracker, readElixirBar } from '../tracker/ElixirTracker'
 import { ARENA_OPPONENT_HALF, TEMPLATE_SIZE } from '../protocol/ClashRoyaleProtocol'
+// ARENA_OPPONENT_HALF is now a function — called at runtime for dynamic scaling
 import type { DeckState } from '../tracker/DeckTracker'
 import type { ElixirState } from '../tracker/ElixirTracker'
 
@@ -117,7 +118,7 @@ export class RecognitionLoop {
     this.elixirTracker.correct(visualElixir)
 
     // ── 3. 帧差：找对方半场的变化区域 ────────────────────────────────────────
-    const diff = this.capture.diffWithPrev(frame, ARENA_OPPONENT_HALF)
+    const diff = this.capture.diffWithPrev(frame, ARENA_OPPONENT_HALF())
 
     // 变化过大（结算/切换画面）或没有变化，跳过识别
     if (diff.changeRatio > MAX_CHANGE_RATIO || diff.regions.length === 0) {

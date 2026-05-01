@@ -91,7 +91,7 @@ import type { CaptureResult } from '../capture/ScreenCapture'
  * 原理：计算圣水条区域内蓝色像素的比例 × 10。
  */
 export async function readElixirBar(frame: CaptureResult): Promise<number> {
-  const { x, y, w, h } = ELIXIR_BAR
+  const { x, y, w, h } = ELIXIR_BAR()   // 动态计算坐标
   const bar = frame.jimp.clone().crop(x, y, w, h)
 
   let bluePixels = 0
