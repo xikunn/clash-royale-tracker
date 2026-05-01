@@ -9,6 +9,7 @@
 const screenshot: any = require('screenshot-desktop')
 import Jimp from 'jimp'
 import { WindowFinder } from './WindowFinder'
+import { setScale } from '../protocol/ClashRoyaleProtocol'
 
 // ── 类型 ──────────────────────────────────────────────────────────────────────
 
@@ -80,7 +81,6 @@ export class ScreenCapture {
         }
         this.window = { screenIndex: 0, rect: info.gameRect }
         // 根据实际窗口尺寸自动缩放协议坐标
-        const { setScale } = require('../protocol/ClashRoyaleProtocol')
         setScale(w, h)
       }
     }
