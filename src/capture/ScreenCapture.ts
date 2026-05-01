@@ -1,12 +1,14 @@
 /**
  * ScreenCapture.ts
  * 固定区域截图 + 图像预处理 + 帧差检测
+ * 支持自动检测模拟器窗口位置（WindowFinder）
  */
 
 // screenshot-desktop has no official @types package — using require cast
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const screenshot: any = require('screenshot-desktop')
 import Jimp from 'jimp'
+import { WindowFinder } from './WindowFinder'
 
 // ── 类型 ──────────────────────────────────────────────────────────────────────
 
@@ -46,20 +48,44 @@ const DEFAULT_WINDOW: EmulatorWindow = {
 
 export class ScreenCapture {
   private window: EmulatorWindow
-  private prevGray: Jimp | null = null   // 上一帧灰度图（用于帧差）
+  private prevGray: Jimp | null = null
+  private finder: WindowFinder
+  private autoDetect: boolean
 
-  constructor(window: EmulatorWindow = DEFAULT_WINDOW) {
+  /**
+   * @param window     手动指定窗口区域（autoDetect=false 时使用）
+   * @param autoDetect true = 每帧自动检测模拟器窗口位置（推荐）
+   */
+  constructor(window: EmulatorWindow = DEFAULT_WINDOW, autoDetect = true) {
     this.window = window
+    this.finder = new WindowFinder()
+    this.autoDetect = autoDetect
   }
 
   setWindow(window: EmulatorWindow): void {
     this.window = window
-    this.prevGray = null   // 窗口变了，重置帧差基准
+    this.prevGray = null
   }
 
   // ── 截图 ──────────────────────────────────────────────────────────────────
 
   async captureGame(): Promise<CaptureResult> {
+    // 自动检测模拟器窗口位置
+    if (this.autoDetect) {
+      const info = this.finder.find()
+      if (info) {
+        const { x, y, w, h } = info.gameRect
+        // 窗口位置变了才重置帧差基准
+        if (
+          x !== this.window.rect.x ||
+          y !== this.window.rect.y
+        ) {
+          this.prevGray = null
+        }
+        this.window = { screenIndex: 0, rect: info.gameRect }
+      }
+    }
+
     const screens = await screenshot.listDisplays()
     const display = screens[this.window.screenIndex] ?? screens[0]
 
